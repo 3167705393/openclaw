@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>德州扑克游戏 - OpenClaw娱乐中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        header {
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3em;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #ffd700, #ffffff, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        
+        .game-area {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        .player-cards, .community-cards, .computer-cards {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            min-height: 120px;
+            align-items: center;
+        }
+        
+        .card {
+            width: 80px;
+            height: 110px;
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: black;
+            font-weight: bold;
+            font-size: 1.2em;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .card.red {
+            color: red;
+        }
+        
+        .card-back {
+            background: linear-gradient(45deg, #1a4c96, #2d5fa8);
+            color: white;
+        }
+        
+        .controls {
+            margin: 30px 0;
+        }
+        
+        button {
+            background: linear-gradient(to right, #ff8c00, #ffd700);
+            color: #1a1a1a;
+            border: none;
+            padding: 12px 25px;
+            margin: 0 10px;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+        
+        .stats {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .pot {
+            font-size: 1.5em;
+            color: gold;
+            margin: 15px 0;
+        }
+        
+        .message {
+            font-size: 1.3em;
+            margin: 20px 0;
+            min-height: 30px;
+            color: #ffd700;
+        }
+        
+        @media (max-width: 768px) {
+            .card {
+                width: 60px;
+                height: 85px;
+                font-size: 0.9em;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♠️ 德州扑克 ♣️</h1>
+            <div class="subtitle">OpenClaw娱乐中心 - 经典纸牌游戏</div>
+        </header>
+        
+        <div class="game-area">
+            <div class="stats">
+                <div class="score-board">
+                    <div>玩家分数: <span id="player-score">100</span></div>
+                    <div>电脑分数: <span id="computer-score">100</span></div>
+                </div>
+                <div class="pot">底池: <span id="pot">0</span></div>
+            </div>
+            
+            <div class="computer-cards">
+                <div class="card card-back"></div>
+                <div class="card card-back"></div>
+            </div>
+            
+            <div class="message" id="message">欢迎来到德州扑克游戏！点击发牌开始</div>
+            
+            <div class="community-cards" id="community-cards">
+                <!-- 社区牌将在这里显示 -->
+            </div>
+            
+            <div class="player-cards" id="player-cards">
+                <!-- 玩家手牌将在这里显示 -->
+            </div>
+            
+            <div class="controls">
+                <button onclick="deal()">发牌</button>
+                <button onclick="fold()">弃牌</button>
+                <button onclick="call()">跟注</button>
+                <button onclick="raise()">加注</button>
+                <button onclick="resetGame()">重置游戏</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏状态
+        let gameState = {
+            playerCards: [],
+            computerCards: [],
+            communityCards: [],
+            playerScore: 100,
+            computerScore: 100,
+            pot: 0,
+            currentBet: 0,
+            gameStarted: false
+        };
+        
+        // 扑克牌组
+        const suits = ['♠', '♥', '♦', '♣'];
+        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        
+        // 初始化游戏
+        function initGame() {
+            updateScores();
+        }
+        
+        // 发牌
+        function deal() {
+            if (gameState.gameStarted) return;
+            
+            // 生成牌组
+            let deck = [];
+            for (let suit of suits) {
+                for (let rank of ranks) {
+                    deck.push({suit, rank});
+                }
+            }
+            
+            // 洗牌
+            deck = shuffleArray(deck);
+            
+            // 发牌给玩家和电脑
+            gameState.playerCards = [deck.pop(), deck.pop()];
+            gameState.computerCards = [deck.pop(), deck.pop()];
+            gameState.communityCards = [deck.pop(), deck.pop(), deck.pop()]; // 翻牌圈
+            
+            gameState.gameStarted = true;
+            gameState.currentBet = 5;
+            gameState.pot = 10;
+            gameState.playerScore -= 5;
+            gameState.computerScore -= 5;
+            
+            updateDisplay();
+            document.getElementById('message').textContent = '游戏开始！请做出选择';
+        }
+        
+        // 跟注
+        function call() {
+            if (!gameState.gameStarted) return;
+            
+            gameState.playerScore -= gameState.currentBet;
+            gameState.pot += gameState.currentBet;
+            updateScores();
+            
+            document.getElementById('message').textContent = '您选择了跟注！';
+            
+            // 电脑行动
+            setTimeout(computerAction, 1000);
+        }
+        
+        // 加注
+        function raise() {
+            if (!gameState.gameStarted) return;
+            
+            let raiseAmount = gameState.currentBet * 2;
+            gameState.playerScore -= raiseAmount;
+            gameState.pot += raiseAmount;
+            gameState.currentBet = raiseAmount;
+            updateScores();
+            
+            document.getElementById('message').textContent = `您选择了加注${raiseAmount}！`;
+            
+            // 电脑行动
+            setTimeout(computerAction, 1000);
+        }
+        
+        // 弃牌
+        function fold() {
+            if (!gameState.gameStarted) return;
+            
+            document.getElementById('message').textContent = '您弃牌了！电脑获胜本轮';
+            gameState.computerScore += gameState.pot;
+            gameState.pot = 0;
+            gameState.gameStarted = false;
+            
+            updateScores();
+        }
+        
+        // 电脑行动
+        function computerAction() {
+            if (!gameState.gameStarted) return;
+            
+            // 简单的AI逻辑
+            let action = Math.random();
+            if (action < 0.5) {
+                // 跟注
+                gameState.computerScore -= gameState.currentBet;
+                gameState.pot += gameState.currentBet;
+                document.getElementById('message').textContent = `电脑跟注${gameState.currentBet}！轮到您了`;
+            } else if (action < 0.8) {
+                // 加注
+                let raiseAmount = gameState.currentBet * 1.5;
+                gameState.computerScore -= raiseAmount;
+                gameState.pot += raiseAmount;
+                gameState.currentBet = Math.floor(raiseAmount);
+                document.getElementById('message').textContent = `电脑加注到${gameState.currentBet}！`;
+            } else {
+                // 弃牌
+                document.getElementById('message').textContent = '电脑弃牌！您获胜本轮';
+                gameState.playerScore += gameState.pot;
+                gameState.pot = 0;
+                gameState.gameStarted = false;
+            }
+            
+            updateScores();
+        }
+        
+        // 重置游戏
+        function resetGame() {
+            gameState = {
+                playerCards: [],
+                computerCards: [],
+                communityCards: [],
+                playerScore: 100,
+                computerScore: 100,
+                pot: 0,
+                currentBet: 0,
+                gameStarted: false
+            };
+            
+            document.getElementById('message').textContent = '游戏已重置，点击发牌开始新游戏';
+            updateDisplay();
+            updateScores();
+        }
+        
+        // 更新显示
+        function updateDisplay() {
+            // 显示玩家手牌
+            const playerCardsDiv = document.getElementById('player-cards');
+            playerCardsDiv.innerHTML = '';
+            gameState.playerCards.forEach(card => {
+                const cardEl = createCardElement(card);
+                playerCardsDiv.appendChild(cardEl);
+            });
+            
+            // 显示社区牌
+            const communityCardsDiv = document.getElementById('community-cards');
+            communityCardsDiv.innerHTML = '';
+            gameState.communityCards.forEach((card, index) => {
+                const cardEl = createCardElement(card);
+                communityCardsDiv.appendChild(cardEl);
+            });
+            
+            // 显示电脑手牌（背面）
+            const computerCardsDiv = document.querySelector('.computer-cards');
+            computerCardsDiv.innerHTML = '';
+            for (let i = 0; i < 2; i++) {
+                const cardBack = document.createElement('div');
+                cardBack.className = 'card card-back';
+                cardBack.textContent = '?';
+                computerCardsDiv.appendChild(cardBack);
+            }
+        }
+        
+        // 创建卡牌元素
+        function createCardElement(card) {
+            const cardEl = document.createElement('div');
+            cardEl.className = `card ${card.suit === '♥' || card.suit === '♦' ? 'red' : ''}`;
+            cardEl.innerHTML = `
+                <div>${card.rank}</div>
+                <div>${card.suit}</div>
+            `;
+            return cardEl;
+        }
+        
+        // 更新分数
+        function updateScores() {
+            document.getElementById('player-score').textContent = gameState.playerScore;
+            document.getElementById('computer-score').textContent = gameState.computerScore;
+            document.getElementById('pot').textContent = gameState.pot;
+        }
+        
+        // 数组洗牌函数
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // 初始化游戏
+        window.onload = initGame;
+    </script>
+</body>
+</html>
